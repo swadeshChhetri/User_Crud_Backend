@@ -1,34 +1,54 @@
-import { Request, Response } from 'express';
-import { getAllUsers, createUser, updateUser, deleteUser } from '../models/userModel';
+import { Request, Response, NextFunction } from 'express';
+import * as userModel from '../models/userModel';
 
-export const getUsers = (req: Request, res: Response) => {
-  getAllUsers((err: any, results: any) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
-  });
+export const getUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const users = await userModel.getAllUsers();
+    res.json(users);
+  } catch (err: any) {
+    next(err);
+  }
 };
 
-export const addUser = (req: Request, res: Response) => {
-  const { name, email } = req.body;
-  createUser({ name, email }, (err: any, result: any) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ id: result.insertId, name, email });
-  });
+export const addUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { name, email } = req.body;
+    if (!name || !email) {
+      res.status(400).json({ error: 'Name and email are required' });
+      return;
+    }
+    const newUser = await userModel.createUser({ name, email });
+    res.status(201).json(newUser);
+  } catch (err: any) {
+    next(err);
+  }
 };
 
-export const updateUserById = (req: Request, res: Response) => {
-  const id = parseInt(req.params.id);
-  const { name, email } = req.body;
-  updateUser(id, { name, email }, (err: any, result: any) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: 'User updated' });
-  });
+export const updateUserById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const id = req.params.id;
+    const { name, email } = req.body;
+    const updatedUser = await userModel.updateUser(id, { name, email });
+    if (!updatedUser) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    res.json({ message: 'User updated', user: updatedUser });
+  } catch (err: any) {
+    next(err);
+  }
 };
 
-export const deleteUserById = (req: Request, res: Response) => {
-  const id = parseInt(req.params.id);
-  deleteUser(id, (err: any) => {
-    if (err) return res.status(500).json({ error: err.message });
+export const deleteUserById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const id = req.params.id;
+    const deletedUser = await userModel.deleteUser(id);
+    if (!deletedUser) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
     res.json({ message: 'User deleted' });
-  });
+  } catch (err: any) {
+    next(err);
+  }
 };
